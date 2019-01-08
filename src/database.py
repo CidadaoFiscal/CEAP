@@ -1,16 +1,19 @@
 import csv
+import sys
 import mysql.connector
 from mysql.connector import Error
 from mysql.connector import errorcode
 
 file_path =  '/home/kenelly/workspaces/cidadaofiscal/CEAP/resources/Ano-2018.csv'
 
+csv.field_size_limit(sys.maxsize)
+
 try:
     #connection setting
-    connection = mysql.connector.connect(host='localhost',
-                                         database = 'cidadaofiscal',
-                                         user = '****',
-                                         password = '*******')
+    connection = mysql.connector.connect(host='*****',
+                                         database = '*****',
+                                         user = '***',
+                                         password = '*****')
 
     #check connection
     if connection.is_connected():
@@ -31,8 +34,13 @@ try:
             data = csv.reader(f, delimiter=';')
             #skip header
             next(data)
-            for line in data:
-                print(line)
+            for i, line in enumerate(data):
+                print(i)
+                for i in [16, 17, 18, 26]:
+                    line[i] = line[i].replace(',','.')
+                for i in range(len(line)):
+                    if line[i] == '':
+                        line[i] = None
                 cursor = connection.cursor(prepared=True)
                 result = cursor.execute(sql_insert, line)
                 connection.commit()
