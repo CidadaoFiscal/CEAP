@@ -1,23 +1,20 @@
 import csv
-import sys
 import mysql.connector
-from mysql.connector import Error
-from mysql.connector import errorcode
 
-file_path =  '/home/kenelly/workspaces/cidadaofiscal/CEAP/resources/Ano-2018.csv'
 
-csv.field_size_limit(sys.maxsize)
+file_path =  '~/resources/Ano-2018.csv'
 
 try:
     #connection setting
-    connection = mysql.connector.connect(host='*****',
-                                         database = '*****',
-                                         user = '***',
-                                         password = '*****')
+    connection = mysql.connector.connect(host='******',
+                                         database = '********',
+                                         user = '******',
+                                         password = '**********')
 
     #check connection
     if connection.is_connected():
         db_Info = connection.get_server_info()
+        cursor = connection.cursor(prepared=True)
         print("Connected on",db_Info)
 
         #insert query
@@ -31,33 +28,32 @@ try:
                      '%s,%s,%s,%s,%s,%s,%s,%s)'
 
         with open(file_path) as f:
-            data = csv.reader(f, delimiter=';')
+            data = csv.reader(f, delimiter=';', quoting=csv.QUOTE_NONE)
             #skip header
             next(data)
-            for i, line in enumerate(data):
-                print(i)
+            for c, line in enumerate(data):
+                #Replace ',' to '.' for the values in the monetary columns
                 for i in [16, 17, 18, 26]:
                     line[i] = line[i].replace(',','.')
+                #Replace '' for NULL
                 for i in range(len(line)):
                     if line[i] == '':
                         line[i] = None
-                cursor = connection.cursor(prepared=True)
                 result = cursor.execute(sql_insert, line)
-                connection.commit()
-                print(cursor.rowcount,'record inserted')
+                if c % 1000 == 0:
+                    connection.commit()
+                    print(c)
+            connection.commit()
+
 
 except mysql.connector as error:
     connection.rollback()
     print("Fail when inserting the record".format(error))
-
+except Exception as exp:
+    print(exp)
 finally:
     #close connection
     if(connection.is_connected()):
         cursor.close()
         connection.close()
         print("Connection closed")
-
-
-
-
-
