@@ -1,14 +1,18 @@
 import os
 import csv
 import pyodbc
+import codecs
+
 
 
 FILE_PATH = os.getenv('FILE_PATH')
 MONETARY_COLUMNS = [16, 17, 18, 26]
-BATCH_SIZE = 1000
+BATCH_SIZE = 10000
+STRING_COLUMNS = [0, 4, 5, 8, 10, 11, 22, 23]
 
 SQL_INSERT = """
  INSERT INTO ceap_despesas (
+    ceap_source,
     ceap_nome_parlamentar, 
     ceap_cadastro, 
     ceap_carteira_parlamentar, 
@@ -39,7 +43,7 @@ SQL_INSERT = """
     ceap_num_deputado,
     ceap_id_documento
     )
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
             ?,?,?,?,?,?,?,?,?,?,?,?,?,?);            
 """
 
@@ -58,9 +62,10 @@ def main():
             ';Pwd=' + password
         )
         cursor = connection.cursor()
+        source = FILE_PATH.split('/')[-1]
 
-        with open(FILE_PATH) as f:
-            data = csv.reader(f, delimiter=';', quoting=csv.QUOTE_NONE)
+        with codecs.open(FILE_PATH) as f:
+            data = csv.reader(f, delimiter=';')
             next(data)  # skip header
             for c, line in enumerate(data):
                 # Replace ',' to '.' for the values in the monetary columns
@@ -69,8 +74,13 @@ def main():
                 for i in range(len(line)):
                     if not line[i]:
                         line[i] = None
+                for string in STRING_COLUMNS:
+                    #print(string)
+                    if line[string]:
+                        line[string] = line[string].encode(encoding = 'latin-1'
+                                                           ,errors = 'ignore')
 
-                cursor.execute(SQL_INSERT, line)
+                cursor.execute(SQL_INSERT, [source] + line)
 
                 if c % BATCH_SIZE == 0:
                     connection.commit()
@@ -80,7 +90,7 @@ def main():
 
 
     except pyodbc.DataError as error:
-        print("Fail when inserting the record".format(error))
+        print("Fail when inserting the record {}".format(error))
     except Exception as exp:
         print(exp)
     finally:
